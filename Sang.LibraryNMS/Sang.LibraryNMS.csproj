@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	  <Version>1.0.0</Version>
+	  <Authors>SangSQ(桑世强)</Authors>
+	  <Description>LibraryNMS, Simple message notification</Description>
+	  <PackageIcon>ico.png</PackageIcon>
+	  <PackageReadmeFile>README.md</PackageReadmeFile>
+	  <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+	  <RepositoryUrl>https://github.com/sangyuxiaowu/Sang.LibraryNMS</RepositoryUrl>
+	  <PackageProjectUrl>https://github.com/sangyuxiaowu/Sang.LibraryNMS</PackageProjectUrl>
+	  <PackageTags>message;notification</PackageTags>
+	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
+	<OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Sang.AliyunUrlHMAC" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>
