@@ -8,14 +8,16 @@
 	  <Version>1.0.0</Version>
 	  <Authors>SangSQ(桑世强)</Authors>
 	  <Description>LibraryNMS, Simple message notification</Description>
-	  <PackageIcon>ico.png</PackageIcon>
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
 	  <RepositoryUrl>https://github.com/sangyuxiaowu/Sang.LibraryNMS</RepositoryUrl>
 	  <PackageProjectUrl>https://github.com/sangyuxiaowu/Sang.LibraryNMS</PackageProjectUrl>
 	  <PackageTags>message;notification</PackageTags>
 	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
-	<OutputType>Library</OutputType>
+		<OutputType>Library</OutputType>
+		<Title>Sang.LibraryNMS</Title>
+		<RepositoryType>git</RepositoryType>
+	  <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 
-namespace Sang.LibraryNM
+namespace Sang.LibraryNMS
 {
     /// <summary>
     /// 消息通知
