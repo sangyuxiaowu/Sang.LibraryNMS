@@ -42,7 +42,7 @@ namespace Sang.LibraryNM
             if (_acc is not null && _acc_expires > DateTime.Now)
                 return _acc;
 
-            var url = $"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={_options.Corpid}&corpsecret={_options.Corpsecret}";
+            var url = $"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={_options.CorpId}&corpsecret={_options.CorpSecret}";
             var response = await _client.GetStringAsync(url);
             var access = JsonSerializer.Deserialize<AccessTokenResponse>(response);
             if (access is null)
@@ -53,6 +53,82 @@ namespace Sang.LibraryNM
             _acc = access;
             _acc_expires = DateTime.Now.AddSeconds(access.expires_in - 10);
             return access;
+        }
+
+
+        /// <summary>
+        /// 构造网页授权链接
+        /// https://developer.work.weixin.qq.com/document/path/91022
+        /// </summary>
+        /// <param name="redirectUri"></param>
+        /// <param name="state"></param>
+        /// <param name="scope"></param>
+        /// <returns></returns>
+        public string BuildWebAuthUrl(string redirectUri, string state, string scope = "snsapi_base")
+        {
+            return $"https://open.weixin.qq.com/connect/oauth2/authorize?appid={_options.CorpId}&redirect_uri={redirectUri}&response_type=code&scope={scope}&state={state}&agentid={_options.AgentId}#wechat_redirect";
+        }
+
+        /// <summary>
+        /// 构造web登录链接
+        /// https://developer.work.weixin.qq.com/document/path/98152
+        /// </summary>
+        /// <param name="redirectUri"></param>
+        /// <param name="state"></param>
+        /// <returns></returns>
+        public string BuildWebLoginUrl(string redirectUri, string state)
+        {
+            return $"https://login.work.weixin.qq.com/wwlogin/sso/login?login_type=CorpApp&appid={_options.CorpId}&agentid={_options.AgentId}&redirect_uri={redirectUri}&state={state}";
+        }
+
+
+        /// <summary>
+        /// 获取web登录用户信息
+        /// https://developer.work.weixin.qq.com/document/path/98176
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
+        public async Task<WebLoginUserInfo?> GetWebLoginUserInfo(string code)
+        {
+            var accessToken = await GetAccessToken();
+            if (accessToken is null)
+            {
+                _logger.LogError("获取 AccessToken 失败");
+                return null;
+            }
+            var url = $"https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo?access_token={accessToken.access_token}&code={code}";
+            var response = await _client.GetStringAsync(url);
+            var user = JsonSerializer.Deserialize<WebLoginUserInfo>(response);
+            if (user is null || user.errcode!=0)
+            {
+                _logger.LogError($"获取用户信息失败，{response}");
+            }
+            return user;
+        }
+
+
+        /// <summary>
+        /// 获取用户信息
+        /// </summary>
+        /// <param name="userid"></param>
+        /// <returns></returns>
+        public async Task<WxWorkUser?> GetUser(string userid)
+        {
+            var accessToken = await GetAccessToken();
+            if (accessToken is null)
+            {
+                _logger.LogError("获取 AccessToken 失败");
+                return null;
+            }
+            var url = $"https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token={accessToken.access_token}&userid={userid}";
+            var response = await _client.GetStringAsync(url);
+            var user = JsonSerializer.Deserialize<WxWorkUser>(response);
+            if (user is null || user.errcode != 0)
+            {
+                _logger.LogError($"获取用户信息失败，{response}");
+                return null;
+            }
+            return user;
         }
 
 
@@ -101,7 +177,6 @@ namespace Sang.LibraryNM
             var data = new StringContent(json, Encoding.UTF8, "application/json");
             var response = await _client.PostAsync(url, data);
             var result = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation(result);
             var back = JsonSerializer.Deserialize<BackJson>(result);
             if (back is null)
             {
@@ -121,26 +196,144 @@ namespace Sang.LibraryNM
 
     }
 
-
-    public record class AccessTokenResponse
+    /// <summary>
+    /// 企微web登录用户信息
+    /// </summary>
+    public record class WebLoginUserInfo : BackJson
     {
-        public int? errcode { get; set; }
-        public string? errmsg { get; set; }
+        /// <summary>
+        /// 成员UserID
+        /// </summary>
+        public string? userid { get; set; }
+
+        /// <summary>
+        /// 非企业成员的标识，对当前企业唯一。不超过64字节
+        /// </summary>
+        public string? openid { get; set; }
+
+        /// <summary>
+        /// 外部联系人id，当且仅当用户是企业的客户，且跟进人在应用的可见范围内时返回
+        /// </summary>
+        public string? external_userid { get; set; }
+    }
+
+    /// <summary>
+    /// 企业用户信息
+    /// </summary>
+    public record class WxWorkUser : BackJson
+    {
+        /// <summary>
+        /// 成员UserID
+        /// </summary>
+        public string? userid { get; set; }
+
+        /// <summary>
+        /// 成员名称
+        /// </summary>
+        public string? name { get; set; }
+
+        /// <summary>
+        /// 成员所属部门id列表
+        /// </summary>
+        public int[]? department { get; set; }
+
+        /// <summary>
+        /// 职务信息
+        /// </summary>
+        public string? position { get; set; }
+
+        /// <summary>
+        /// 手机号码
+        /// </summary>
+        public string? mobile { get; set; }
+
+        /// <summary>
+        /// 性别。0表示未定义，1表示男性，2表示女性
+        /// </summary>
+        public string? gender { get; set; }
+
+        /// <summary>
+        /// 邮箱
+        /// </summary>
+        public string? email { get; set; }
+
+        /// <summary>
+        /// 头像url
+        /// </summary>
+        public string? avatar { get; set; }
+
+        /// <summary>
+        /// 别名
+        /// </summary>
+        public string? alias { get; set; }
+
+        /// <summary>
+        /// 激活状态: 1=已激活，2=已禁用，4=未激活，5=退出企业。
+        /// </summary>
+        public int? status { get; set; }
+
+        /// <summary>
+        /// 员工个人二维码，扫描可添加为外部联系人
+        /// </summary>
+        public string? qr_code { get; set; }
+
+        /// <summary>
+        /// 地址
+        /// </summary>
+        public string? address { get; set; }
+    }
+
+    /// <summary>
+    /// AccessToken 响应
+    /// </summary>
+    public record class AccessTokenResponse : BackJson
+    {
+        /// <summary>
+        /// 获取到的凭证
+        /// </summary>
         public string? access_token { get; set; }
+
+        /// <summary>
+        /// 凭证有效时间，单位：秒
+        /// </summary>
         public int expires_in { get; set; }
     }
 
+    /// <summary>
+    /// 返回结果
+    /// </summary>
     public record class BackJson
     {
-        public int errcode { get; set; }
-        public string errmsg { get; set; }
+        /// <summary>
+        /// 返回码
+        /// </summary>
+        public int? errcode { get; set; }
+
+        /// <summary>
+        /// 对返回码的文本描述内容
+        /// </summary>
+        public string? errmsg { get; set; }
     }
 
 
+    /// <summary>
+    /// 微信企业号配置
+    /// </summary>
     public sealed class WxWorkApiOptions
     {
+        /// <summary>
+        /// 企业应用的id
+        /// </summary>
         public int AgentId { get; set; }
-        public string Corpid { get; set; }
-        public string Corpsecret { get; set; }
+
+        /// <summary>
+        /// 企业 ID
+        /// </summary>
+        public required string CorpId { get; set; }
+
+        /// <summary>
+        /// 应用的凭证密钥
+        /// </summary>
+        public required string CorpSecret { get; set; }
     }
 }
