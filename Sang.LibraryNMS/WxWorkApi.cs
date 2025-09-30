@@ -12,6 +12,8 @@ namespace Sang.LibraryNM
         private readonly ILogger<WxWorkApi> _logger;
         private AccessTokenResponse _acc;
         private DateTime _acc_expires = DateTime.MinValue;
+        private AccessTokenResponse _ticket;
+        private DateTime _ticket_expires = DateTime.MinValue;
 
         /// <summary>
         ///  Json 格式化配置，忽略null值
@@ -131,6 +133,62 @@ namespace Sang.LibraryNM
             return user;
         }
 
+        /// <summary>
+        /// 获取 jsapi_ticket
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception">WxWorkApiOptions 未配置</exception>
+        public async Task<AccessTokenResponse?> GetJsApiTicket()
+        {
+            if (_options is null)
+                throw new Exception("WxWorkApiOptions is null");
+            // 判断是否过期
+            if (_ticket is not null && _ticket_expires > DateTime.Now)
+                return _ticket;
+            var accessToken = await GetAccessToken();
+            if (accessToken is null)
+            {
+                _logger.LogError("获取 AccessToken 失败");
+                return null;
+            }
+            var url = $"https://qyapi.weixin.qq.com/cgi-bin/get_jsapi_ticket?access_token={accessToken.access_token}";
+            var response = await _client.GetStringAsync(url);
+            var ticket = JsonSerializer.Deserialize<AccessTokenResponse>(response);
+            if (ticket is null)
+            {
+                _logger.LogError("获取 jsapi_ticket 失败");
+                return null;
+            }
+            _ticket = ticket;
+            _ticket_expires = DateTime.Now.AddSeconds(ticket.expires_in - 10);
+            return ticket;
+        }
+
+        /// <summary>
+        /// JS接口企业身份注册
+        /// </summary>
+        /// <param name="url"></param>
+        /// <returns></returns>
+        public async Task<ConfigSignature?> GetConfigSignature(string url)
+        {
+            var ticket = await GetJsApiTicket();
+            if (ticket is null)
+            {
+                _logger.LogError("获取 jsapi_ticket 失败");
+                return null;
+            }
+            var nonceStr = Utils.GenerateNonceStr();
+            var timestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
+            var signature = WxWorkUtils.makeJsSignature(ticket.ticket!, timestamp, nonceStr, url);
+            return new ConfigSignature
+            {
+                corpId = _options.CorpId,
+                nonceStr = nonceStr,
+                signature = signature,
+                timestamp = timestamp
+            };
+        }
+
 
         #region 发送应用消息
 
@@ -194,6 +252,29 @@ namespace Sang.LibraryNM
 
         #endregion
 
+    }
+
+    /// <summary>
+    /// JS 签名
+    /// </summary>
+    public record class ConfigSignature
+    {
+        /// <summary>
+        /// 企业 ID
+        /// </summary>
+        public string? corpId { get; set; }
+        /// <summary>
+        /// 时间戳
+        /// </summary>
+        public long timestamp { get; set; }
+        /// <summary>
+        /// 随机字符串
+        /// </summary>
+        public string? nonceStr { get; set; }
+        /// <summary>
+        /// 签名
+        /// </summary>
+        public string? signature { get; set; }
     }
 
     /// <summary>
@@ -292,6 +373,11 @@ namespace Sang.LibraryNM
         /// 获取到的凭证
         /// </summary>
         public string? access_token { get; set; }
+
+        /// <summary>
+        /// 获取到的 Ticket
+        /// </summary>
+        public string? ticket { get; set; }
 
         /// <summary>
         /// 凭证有效时间，单位：秒
