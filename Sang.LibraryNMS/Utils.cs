@@ -1,4 +1,4 @@
-﻿namespace Sang.LibraryNM
+﻿namespace Sang.LibraryNMS
 {
     public class Utils
     {

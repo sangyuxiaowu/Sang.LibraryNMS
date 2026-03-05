@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Sang.LibraryNM
+namespace Sang.LibraryNMS
 {
     /// <summary>
     /// WxWorkUtils
